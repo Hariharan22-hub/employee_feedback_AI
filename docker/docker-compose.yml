@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+# NOTE: this compose file runs the demo SQLite build for simplicity.
+# For a production-style stack (Phase 4/10/12 of the roadmap), add a
+# postgres service and point database.py's SQLALCHEMY_DATABASE_URL at it,
+# e.g.:
+#
+#   postgres:
+#     image: postgres:16
+#     environment:
+#       POSTGRES_DB: feedback_agent
+#       POSTGRES_USER: app
+#       POSTGRES_PASSWORD: change_me
+#     volumes:
+#       - pg_data:/var/lib/postgresql/data
