@@ -17,6 +17,8 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.orm import Session
 
 import ai_agent
@@ -253,5 +255,31 @@ def health():
     return {"status": "ok"}
 
 
-# Serve the frontend as static files at "/" (simple single-service demo deploy)
-app.mount("/", StaticFiles(directory="../frontend", html=True), name="frontend")
+# Define a custom SPA StaticFiles handler to allow React SPA routing to function on page refresh
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            response = await super().get_response(path, scope)
+            if response.status_code == 404:
+                if not (path.startswith("api") or path.startswith("docs") or path.startswith("openapi.json") or path.startswith("redoc")):
+                    return FileResponse(os.path.join(self.directory, "index.html"))
+            return response
+        except (HTTPException, StarletteHTTPException) as ex:
+            if ex.status_code == 404:
+                if path.startswith("api") or path.startswith("docs") or path.startswith("openapi.json") or path.startswith("redoc"):
+                    raise ex
+                return FileResponse(os.path.join(self.directory, "index.html"))
+            raise ex
+
+# Resolve absolute path to the frontend build directory relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend", "dist")
+
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/", SPAStaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+else:
+    # Fallback to local source directory for development if build folder does not exist
+    LOCAL_FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
+    app.mount("/", SPAStaticFiles(directory=LOCAL_FRONTEND_DIR, html=True), name="frontend")
+
+# Trigger reload comment to pick up frontend/dist after build

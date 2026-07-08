@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import api from "../api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,8 +16,8 @@ export default function Login() {
       formData.append("username", email);
       formData.append("password", password);
 
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/login",
+      const res = await api.post(
+        "/login",
         formData,
         {
           headers: {
